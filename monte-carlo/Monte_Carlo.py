@@ -1,14 +1,15 @@
+from plot_utils import plot_blackjack_values, plot_policy
 import time
 import sys
 import gym
 import numpy as np
 from collections import defaultdict
 
-from plot_utils import plot_blackjack_values, plot_policy
+import matplotlib
+matplotlib.use('TkAgg')  # it doesn't work on my computer otherwise
+
 env = gym.make('Blackjack-v0')
 
-import matplotlib
-matplotlib.use('TkAgg')  # it doesn't work on my mac otherwise
 
 def get_greedy_action(Q, state):
     # if there are two or more actions for which Q[s][a] is maximized, choose uniformly between them
@@ -72,6 +73,7 @@ def mc_control(env, num_episodes, alpha, gamma=1.0, eps=1, final_eps=0.1, stop_e
     policy = defaultdict(lambda: np.choice(np.arange(nA)))
 
     # eps will decrease linearly and reach final_eps in episode stop_eps_at_episode
+    final_eps = min(eps, final_eps)
     stop_eps_at_episode = num_episodes * stop_eps_after - 1
     eps_delta = (eps - final_eps) / stop_eps_at_episode
 
@@ -95,7 +97,8 @@ def mc_control(env, num_episodes, alpha, gamma=1.0, eps=1, final_eps=0.1, stop_e
 
 # obtain the estimated optimal policy and action-value function
 start_time = time.time()
-policy, Q = mc_control(env, 500000, 0.01)  # eps will go from 1 to .1 in 250000 episodes
+# eps will go from 1 to .1 in 250000 episodes
+policy, Q = mc_control(env, 500000, 0.01)
 end_time = time.time()
 print('Time', end_time-start_time)
 
