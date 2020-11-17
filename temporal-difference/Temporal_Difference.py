@@ -104,7 +104,7 @@ def q_learning(env, num_episodes, alpha, gamma=1.0, eps=1, final_eps=0.1, stop_e
             S_t1, R_t1, done, _ = env.step(A_t)
 
             # choose A_max according to the target policy
-            A_max = get_greedy_action(Q, S_t)
+            A_max = get_greedy_action(Q, S_t1)
             # update Q[S_t][A_t] using the estimated return from Q[S_t+1][A_max]
             Q[S_t][A_t] += alpha * \
                 (R_t1 + gamma * Q[S_t1][A_max] - Q[S_t][A_t])
