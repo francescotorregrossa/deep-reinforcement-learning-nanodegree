@@ -2,6 +2,32 @@ import torch
 
 
 def dt_dqn(s, a, r, ns, d, q_local, q_target, gamma):
+    """Calculate temporal-difference delta_t using fixed Q-targets. This works for batches of tuples.
+
+    Parameters
+    ----------
+        s : torch.tensor
+            Current state (size [n * m], where n is the batch size and m is the number of features in the state)
+        a : torch.tensor
+            Action taken (size [n])
+        r : torch.tensor
+            Reward obtained (size [n])
+        ns : torch.tensor
+            Next state (size [n * m])
+        d : torch.tensor
+            True if the episode ended after the action (size [n])
+        q_local : torch.nn.Module
+            Network used to determine the policy
+        q_target : torch.nn.Module
+            Copy of q_local that is updated less frequently
+        gamma : float
+            Weight of the estimation of future rewards, in range [0, 1]
+
+    Returns
+    -------
+        torch.tensor 
+            Tensor of size [n] where each row is the delta_t of a tuple
+    """
     with torch.no_grad():
         QT = q_target(ns).max(1)[0]
     QL = q_local(s).gather(1, a.unsqueeze(1)).squeeze(1)
@@ -9,36 +35,71 @@ def dt_dqn(s, a, r, ns, d, q_local, q_target, gamma):
 
 
 def dt_double_dqn(s, a, r, ns, d, q_local, q_target, gamma):
-    pass
+    """Calculate temporal-difference delta_t using Double DQN. This works for batches of tuples.
+
+    Parameters
+    ----------
+        s : torch.tensor
+            Current state (size [n * m], where n is the batch size and m is the number of features in the state)
+        a : torch.tensor
+            Action taken (size [n])
+        r : torch.tensor
+            Reward obtained (size [n])
+        ns : torch.tensor
+            Next state (size [n * m])
+        d : torch.tensor
+            True if the episode ended after the action (size [n])
+        q_local : torch.nn.Module
+            Network used to determine the policy
+        q_target : torch.nn.Module
+            Copy of q_local that is updated less frequently
+        gamma : float
+            Weight of the estimation of future rewards, in range [0, 1]
+
+    Returns
+    -------
+        torch.tensor 
+            Tensor of size [n] where each row is the delta_t of a tuple
+    """
+    with torch.no_grad():
+        QLns = q_local(ns).max(1)[1].unsqueeze(1)
+        QT = q_target(ns).gather(1, QLns).squeeze(1)
+    QL = q_local(s).gather(1, a.unsqueeze(1)).squeeze(1)
+    return r + gamma * QT * (1 - torch.FloatTensor(d)) - QL
 
 
 """
-QL [5 x 4]
-            a_0      a_1       a_2     a_3
-tensor([[ 0.0060, -0.0931,  0.0496, -0.0626],    # 0 in the batch
-        [ 0.0139, -0.0952,  0.0470, -0.0571],    # 1 
-        [ 0.0024, -0.0916,  0.0288, -0.0674],    # 2
-        [-0.0207, -0.1126,  0.0453, -0.1079],    # 3
-        [ 0.0089, -0.1415,  0.0422, -0.1021]])   # 4
+def dt_dqn(s, a, r, ns, d, q_local, q_target, gamma):
+    with torch.no_grad():   # no need for gradients when we're evaluating the TD target
+        QT = q_target(ns)   # evaluate the next state using the target network (out: [n * action_size])
+        QT = QT.max(1)      # take the max along the column (actions) (out: two tensors [n])
+        QT = QT[0]          # - [0] has the max values for each element in the batch, 
+                            # - [1] has the indexes of the max values
 
-a [5] 
-tensor([1, 3, 1, 0, 2])
+    a = a.unsqueeze(1)      # reshape [n] -> [n * 1]
+    QL = q_local(s)         # evaluate the current state using the local network (out: [n * action_size])
+    QL = QL.gather(1, a)    # for each row, take the column in QL indicated by a (out: [n * 1])
+    QL = QL.squeeze(1)      # reshape [n * 1] -> [n]
 
-a.unsqueeze(1) [5 x 1]
-tensor([[ 1],
-        [ 3],
-        [ 1],
-        [ 0],
-        [ 2]])
+    return r + gamma * QT * (1 - torch.FloatTensor(d)) - QL
 
-QL.gather(1, a.unsqueeze(1)) [5 x 1]
-tensor(1.00000e-02 *
-        [[-9.3088],
-        [-5.7069],
-        [-9.1603],
-        [-2.0720],
-        [ 4.2235]])
 
-QL.squeeze [5]
-tensor([-0.0931, -0.0571, -0.0916, -0.0207, 0.0422])
+def dt_double_dqn(s, a, r, ns, d, q_local, q_target, gamma):
+    with torch.no_grad():         # no need for gradients when we're evaluating the TD target
+        QLns = q_local(ns)        # evaluate the next state using the local network (out: [n * action_size])
+        QLns = QLns.max(1)        # take the max along the column (actions) (out: two tensors [n])
+        QLns = QLns[1]            # [1] has the indexes of the max values
+        QLns = QLns.unsqueeze(1)  # reshape [n] -> [n * 1]
+
+        QT = q_target(ns)         # evaluate the next state using the target network (out: [n * action_size])
+        QT = QT.gather(1, QLns)   # for each row, take the value estimated by the target network for
+                                  # the best action estimated by the local network (out: [n * 1])
+        QT = QT.squeeze(1)        # reshape [n * 1] -> [n]
+
+    a = a.unsqueeze(1)            # reshape [n] -> [n * 1]
+    QL = q_local(s)               # evaluate the current state using the local network (out: [n * action_size])
+    QL = QL.gather(1, a)          # for each row, take the column in QL indicated by a (out: [n * 1])
+    QL = QL.squeeze(1)            # reshape [n * 1] -> [n]
+
+    return r + gamma * QT * (1 - torch.FloatTensor(d)) - QL
 """
