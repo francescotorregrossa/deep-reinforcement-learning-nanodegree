@@ -1,4 +1,5 @@
 import sys
+import platform
 import argparse
 
 import numpy as np
@@ -30,7 +31,18 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 # setup the environment
-env = UnityEnvironment(file_name="setup/Banana.app")
+env = None
+system = platform.system()
+if system == 'Linux':
+    env = UnityEnvironment(file_name="setup/Banana_Linux/Banana.x86_64")
+elif system == 'Darwin':
+    env = UnityEnvironment(file_name="setup/Banana.app")
+elif system == 'Windows':
+    env = UnityEnvironment(file_name="setup/Banana_Windows_x86_64/Banana.exe")
+else:
+    print('Cannot find environment for this system.')
+    exit(0)
+
 brain_name = env.brain_names[0]
 brain = env.brains[brain_name]
 env_info = env.reset(train_mode=True)[brain_name]
