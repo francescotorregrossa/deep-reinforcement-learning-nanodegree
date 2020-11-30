@@ -31,7 +31,7 @@ def dt_dqn(s, a, r, ns, d, q_local, q_target, gamma):
     with torch.no_grad():
         QT = q_target(ns).max(1)[0]
     QL = q_local(s).gather(1, a.unsqueeze(1)).squeeze(1)
-    return r + gamma * QT * (1 - torch.FloatTensor(d)) - QL
+    return r + gamma * QT * (1 - d) - QL
 
 
 def dt_double_dqn(s, a, r, ns, d, q_local, q_target, gamma):
@@ -65,41 +65,4 @@ def dt_double_dqn(s, a, r, ns, d, q_local, q_target, gamma):
         QLns = q_local(ns).max(1)[1].unsqueeze(1)
         QT = q_target(ns).gather(1, QLns).squeeze(1)
     QL = q_local(s).gather(1, a.unsqueeze(1)).squeeze(1)
-    return r + gamma * QT * (1 - torch.FloatTensor(d)) - QL
-
-
-"""
-def dt_dqn(s, a, r, ns, d, q_local, q_target, gamma):
-    with torch.no_grad():   # no need for gradients when we're evaluating the TD target
-        QT = q_target(ns)   # evaluate the next state using the target network (out: [n * action_size])
-        QT = QT.max(1)      # take the max along the column (actions) (out: two tensors [n])
-        QT = QT[0]          # - [0] has the max values for each element in the batch, 
-                            # - [1] has the indexes of the max values
-
-    a = a.unsqueeze(1)      # reshape [n] -> [n * 1]
-    QL = q_local(s)         # evaluate the current state using the local network (out: [n * action_size])
-    QL = QL.gather(1, a)    # for each row, take the column in QL indicated by a (out: [n * 1])
-    QL = QL.squeeze(1)      # reshape [n * 1] -> [n]
-
-    return r + gamma * QT * (1 - torch.FloatTensor(d)) - QL
-
-
-def dt_double_dqn(s, a, r, ns, d, q_local, q_target, gamma):
-    with torch.no_grad():         # no need for gradients when we're evaluating the TD target
-        QLns = q_local(ns)        # evaluate the next state using the local network (out: [n * action_size])
-        QLns = QLns.max(1)        # take the max along the column (actions) (out: two tensors [n])
-        QLns = QLns[1]            # [1] has the indexes of the max values
-        QLns = QLns.unsqueeze(1)  # reshape [n] -> [n * 1]
-
-        QT = q_target(ns)         # evaluate the next state using the target network (out: [n * action_size])
-        QT = QT.gather(1, QLns)   # for each row, take the value estimated by the target network for
-                                  # the best action estimated by the local network (out: [n * 1])
-        QT = QT.squeeze(1)        # reshape [n * 1] -> [n]
-
-    a = a.unsqueeze(1)            # reshape [n] -> [n * 1]
-    QL = q_local(s)               # evaluate the current state using the local network (out: [n * action_size])
-    QL = QL.gather(1, a)          # for each row, take the column in QL indicated by a (out: [n * 1])
-    QL = QL.squeeze(1)            # reshape [n * 1] -> [n]
-
-    return r + gamma * QT * (1 - torch.FloatTensor(d)) - QL
-"""
+    return r + gamma * QT * (1 - d) - QL

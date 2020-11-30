@@ -3,10 +3,11 @@ import numpy as np
 import torch
 import torch.optim as optim
 
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 class QNetworkAgent():
 
-    # -- initialization -- #
     def __init__(self, QNetwork, state_size, action_size,
                  replay_buffer, Delta,
                  eps=1, eps_decay=0.9995, min_eps=0.0001, gamma=0.99,
@@ -32,7 +33,6 @@ class QNetworkAgent():
             self.state_size, self.action_size).to(device)
         self.optimizer = optim.Adam(self.q_local.parameters(), lr=self.alpha)
         self.update_i = 0
-    # -- initialization -- #
 
     def act(self, s):
 
