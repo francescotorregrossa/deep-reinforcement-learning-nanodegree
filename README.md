@@ -15,6 +15,7 @@ Also, here's a list of exercise notebooks trained on a few [OpenAI Gym](https://
 - [Temporal difference methods](temporal-difference/Temporal_Difference.ipynb) (SARSA, Q-Learning, Expected-Sarsa)
 - [Discretization](discretization/Discretization.ipynb) and [tile coding](discretization/Tile_Coding.ipynb) (Q-Learning)
 - [Deep Q-Network](deep-q-network/Deep_Q_Network.ipynb)
+- [Hill Climbing](hill-climbing/Hill_Climbing.ipynb) and [Cross Entropy Method](cross-entropy-method/CEM.ipynb) as policy-based methods
 - todo
 
 Python scripts derived from the notebooks are provided as well.
