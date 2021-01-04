@@ -10,12 +10,53 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class MADDPG:
-
-    # -- initialization -- #
+    """Manage a pair of DDPG agents. Keeps four networks, actor (policy), critic (value), and the corresponding
+       pair of target_actor and target_critic (for estimation of TD target).
+       Learning is performed automatically after a certain number of calls to the store function."""
 
     def __init__(self, state_size, action_size, num_agents, replay_buffer,
                  update_every=1, batch_size=1024, alpha=0.0003, gamma=0.99, tau=0.001,
                  eps=3, min_eps=0.5, delta_eps=0.002, learning=True):
+        """Create a new MADDPG instance with random values.
+
+        Parameters
+        ----------
+            state_size : int
+                Number of parameters in the state.
+            action_size : int
+                Number of actions available.
+            num_agents : int
+                Number of agents in the environment.
+            replay_buffer : UniformReplayBuffer
+                Instance of UniformReplayBuffer. Will be used to store and sample experiences.
+            update_every : int
+                Indicates how many experiences to store before performing a learning step.
+                Note that new experiences aren't guaranteed to be sampled.
+            batch_size : int
+                Number of tuples to be sampled in a single learning step.
+            alpha : float
+                Learning rate of the optimizer used for actor and critic. 
+                The value needs to be in [0, 1] (usually closer to 0).
+            gamma : float
+                Weight of the estimation of TD target. The value needs to be in [0, 1]
+                (usually closer to 1) where 1 means that future rewards are as important as the immediate 
+                reward and 0 means that future rewards are ignored.
+            tau : float
+                Parameters of local networks are copied into target networks after a learning step. tau allows for 'soft'
+                updates, where instead of a direct copy of the local parameters, we interpolate towards them, according to
+                target = (1 - tau) target + tau (local). The value needs to be in [0, 1] (usually closer to 0),
+                where 1 means that we directly copy the parameters and 0 means that the target network stays constant.
+            eps : float
+                Initial value for the amount of noise in the action.
+            delta_eps : float
+                Used to decrease eps at the end of every episode.
+            min_eps : float
+                eps will not go below this value during training. Updates are performed according to
+                eps = max(eps - delta_eps, min_eps).            
+            learning : bool
+                Determines if actions are performed with noise (True) or without it (False).
+        """
+
         self.state_size, self.action_size, self.num_agents = state_size, action_size, num_agents
         self.update_every, self.batch_size = update_every, batch_size
         self.replay_buffer = replay_buffer
@@ -26,6 +67,7 @@ class MADDPG:
         self.reset()
 
     def reset(self):
+        """Delete experiences, recreate all networks and reset eps to its original value."""
 
         self.actor, self.target_actor = Actor(self.state_size, self.action_size).to(device), \
             Actor(self.state_size, self.action_size).to(device)
@@ -49,9 +91,20 @@ class MADDPG:
         self.update_i = 0
         self.eps = self.original_eps
 
-    # -- initialization -- #
-
     def act(self, state):
+        """Choose an action according to eps, learning, and actor.
+
+        Parameters
+        ----------
+        state : torch.tensor
+            Tensor of size [state_size]
+
+        Returns
+        -------
+            Numpy array of size [action_size] whose values are in [-1, 1],
+            representing the action that is likely to maximize cumulative rewards.
+        """
+
         state = torch.FloatTensor(state).to(device)
 
         # predict the action a that will maximize Q(s, a)
@@ -67,6 +120,22 @@ class MADDPG:
         return np.clip(action, -1, 1)
 
     def store(self, s, a, r, ns, d):
+        """Add a new experience to the replay buffer. Automatically calls learn() when needed.
+
+        Parameters
+        ----------
+        s : torch.tensor
+            Initial state of the environment, per agent
+        a : numpy array
+            Action taken by each agent
+        r : numpy array
+            Reward obtained for taking that action, per agent
+        ns : torch.tensor
+            State of the environment after taking that action, per agent
+        d : bool
+            Whether or not the episode is over, per agent
+        """
+
         # store a new experience
         self.replay_buffer.add((s, a, r, ns, d))
 
@@ -78,17 +147,23 @@ class MADDPG:
         self.update_i = (self.update_i + 1) % self.update_every
 
     def new_episode(self):
-        # reset and decrease the intensity of the noise in the next episode
+        """Reset the noise and decrease its intensity for the next episode."""
         self.noise.reset()
         self.eps = max(self.eps - self.delta_eps, self.min_eps)
 
     def flip(self, x):
+        """Takes a vector x of shape [:, 2, :] and flips it along the second dimension."""
         return torch.cat((x[:, 1, :].unsqueeze(1), x[:, 0, :].unsqueeze(1)), dim=1)
 
     def partial_detach(self, x):
+        """Takes a vector x of shape [:, 2, :] and detaches gradients at the index [:, 1, :]."""
         return torch.cat((x[:, 0, :].unsqueeze(1), x[:, 1, :].unsqueeze(1).detach()), dim=1)
 
     def preprocess(self, x, detach=False):
+        """Takes a vector x of shape [:, 2, j] and uses flip to obtain another vector of
+           size [:, 2, j]. Then, it concatenets them to a final shape of [:, 2, j * 2]. 
+           If requested, some of the elements are detached. 
+           Read section 5.2 in the report for a more detailed explaination."""
         x_flip = self.flip(x)
         if detach:
             x = self.partial_detach(x)
@@ -96,7 +171,10 @@ class MADDPG:
         return torch.cat((x, x_flip), dim=2)
 
     def learn(self):
-        # note that this is called automatically by the agent
+        """Sample a batch of experiences (based on batch_size), estimate the TD error
+        and take a gradient step to minimize it in critic. Then use the new critic to
+        compute the gradients for the actor. Finally perform the soft update of target networks.
+        Note that this is called automatically."""
 
         # sample tuples of experiences from memory (each of these variables is a torch tensor)
         s, a, r, ns, d = self.replay_buffer.sample(self.batch_size)

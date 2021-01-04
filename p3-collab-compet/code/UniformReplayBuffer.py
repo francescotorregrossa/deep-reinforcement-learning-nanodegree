@@ -44,7 +44,6 @@ class UniformReplayBuffer():
             -------
                 A tuple of torch tensors ([s], [a], [r], [ns], [d]).
                 The number of rows in each tensor is the same and equals n, the size of the batch.
-                The number of columns in s and ns depends on the shape of the state.
         """
         samples = np.random.choice(np.array(self.buff), n, replace)
 

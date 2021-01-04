@@ -3,6 +3,8 @@ import copy
 
 
 class OUNoise:
+    """Sample noise from a Ornstein-Uhlenbeck process."""
+
     def __init__(self, size, mu=0, theta=0.15, sigma=0.2):
         self.mu = mu * np.ones(size)
         self.theta = theta
