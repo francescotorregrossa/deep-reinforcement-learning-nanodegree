@@ -68,7 +68,7 @@ If you want to try another configuration, you can use one of the files under `mo
 
 ### Train an agent from scratch
 
-You can also use `main.py` to train a new agent. Again, if you want to change the configuration you have to update [this line](https://github.com/francescotorregrossa/deep-reinforcement-learning-nanodegree/blob/8932c0b02bab125234bd3484c723549c89395b3b/p1-navigation/main.py#L54-L55). You'll find other clssses and functions in the `code/` folder. The report also contains useful functions for plotting results with `matplotlib`.
+You can also use `main.py` to train a new agent. Again, if you want to change the configuration you have to update [this line](https://github.com/francescotorregrossa/deep-reinforcement-learning-nanodegree/blob/8932c0b02bab125234bd3484c723549c89395b3b/p1-navigation/main.py#L54-L55). You'll find other classes and functions in the `code/` folder. The report also contains useful functions for plotting results with `matplotlib`.
 
 ```bash
 python main.py -t

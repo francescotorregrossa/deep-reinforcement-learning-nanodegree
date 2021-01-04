@@ -3,13 +3,13 @@
 
 ![](imgs/gif.gif)
 
-> The model used to generate this gif is `final.pth` (MADDPG with two agents that share the networks in a self-play fashion), which was trained for 2000 episodes.
+> The model used to generate this gif is `final.pth` (MADDPG with two agents that share the networks in a self-play fashion), which was trained for 2000 episodes using `main.py`.
 
 ## Overview
 
 The environment for this project is [Tennis](https://github.com/udacity/deep-reinforcement-learning/tree/master/p3_collab-compet) from Unity and it is provided in the `setup` folder. This repository contains an implementation of the [MADDPG algorithm](https://arxiv.org/pdf/1706.02275.pdf) (although not directly from pixels), but in this case two agents share the same actor and critic networks, to allow for a self-play mechanism.
 
-For details on the implementation see the [report](Report.ipynb). Alternatively, you can find the pre-trained model under `models/`.
+For details on the implementation see the [report](Report.ipynb). Alternatively, you can find the pre-trained model under `models/` and the source code in `main.py` and `code/`.
 
 ## Environment
 
@@ -49,9 +49,23 @@ unzip setup.zip
 pip install ./setup
 ```
 
-### Watch a pre-trained agent
+### Watch pre-trained agents
+
+You can use `main.py` to watch two agents play the game. The provided model `final.pth` is a **MADDPG with self-play**, so it contains one actor only that is used for both agents.
+
+```bash
+python main.py
+```
 
 ### Train an agent from scratch
+
+You can also use `main.py` to train a new agent. If you want to change the configuration you'll find the replay buffer's capacity in [main.py](main.py), the network architectures in [Actor.py](code/Actor.py) and [Critic.py](code/Critic.py), and finally the rest of the hyperparameters in [MADDPG.py](code/MADDPG.py). The report also contains useful functions for plotting results with `matplotlib`.
+
+```bash
+python main.py -t
+```
+
+Note that this script will **override** `final.pth` and **could take a few hours to run**!
 
 ### Open the report with jupyter
 
