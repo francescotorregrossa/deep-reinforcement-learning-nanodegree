@@ -57,11 +57,11 @@ You can use `main.py` to watch an agent play the game. The provided model `final
 python main.py
 ```
 
-If you want to try another configuration, you can use one of the files under `model/` but note that you might also need to [change this line]() in `main.py`.
+If you want to try another configuration, you can use one of the files under `model/` but note that you might also need to [change this line](https://github.com/francescotorregrossa/deep-reinforcement-learning-nanodegree/blob/4b20dc88f7955bac3d64eb1027cfe7203fe3e505/p2-continuous-control/main.py#L59) in `main.py`.
 
 ### Train an agent from scratch
 
-You can also use `main.py` to train a new agent. Again, if you want to change the configuration you have to update [this line](). You'll find other classes and functions in the `code/` folder. The report also contains useful functions for plotting results with `matplotlib`.
+You can also use `main.py` to train a new agent. Again, if you want to change the configuration you have to update [this line](https://github.com/francescotorregrossa/deep-reinforcement-learning-nanodegree/blob/4b20dc88f7955bac3d64eb1027cfe7203fe3e505/p2-continuous-control/main.py#L59). You'll find other classes and functions in the `code/` folder. The report also contains useful functions for plotting results with `matplotlib`.
 
 ```bash
 python main.py -t
