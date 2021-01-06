@@ -10,11 +10,37 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
 
 class A2CAgent:
+    """Manage an A2C agent. Keeps two networks, actor (policy) and critic (value).
+       Learning is performed automatically after n calls to the store function."""
 
     # -- initialization -- #
 
     def __init__(self, state_size, action_size, calc_advantages, n=4,
                  alpha=0.0001, gamma=0.95, tau=0.5):
+        """Create a new A2C agent with random networks.
+
+        Parameters
+        ----------
+            state_size : int
+                Number of parameters in the state.
+            action_size : int
+                Number of actions available.
+            calc_advantages : function
+                One of n_step or gae. Will be used to estimate the advantages
+                for the actions taken and to guide gradient ascent.
+            n : int
+                Indicates how many steps to take before performing a learning step.
+                Experiences are removed after the learning step.
+            alpha : float
+                Learning rate of the optimizer used for actor and critic. 
+            gamma : float
+                Weight of the estimation of TD target. The value needs to be in [0, 1]
+                (usually closer to 1) where 1 means that future rewards are as important as the immediate 
+                reward and 0 means that future rewards are ignored.
+            tau : float
+                Value of lambda in TD(lambda), only used with gae. If it is 0, the procedure will be similar
+                to a single step TD, whereas with 1 it will be more like MC, except it is still limited by n.
+        """
 
         self.state_size, self.action_size = state_size, action_size
         self.alpha, self.gamma, self.tau = alpha, gamma, tau
@@ -23,12 +49,16 @@ class A2CAgent:
         self.reset()
 
     def reset_temporary_buffer(self):
-        # store some values in temporary buffers to avoid
-        # re-evaluating things and speed up the execution
+        """Delete experiences."""
+
+        # some values will be stored in temporary buffers to
+        # avoid re-evaluating them and to speed up the execution
         self.tmp_r, self.tmp_ns, self.tmp_d = [], None, []
         self.tmp_log_prob, self.tmp_critic_out = [], []
 
     def reset(self):
+        """Delete experiences and recreate the networks."""
+
         self.actor = Actor(self.state_size, self.action_size).to(device)
         self.actor_optimizer = optim.Adam(
             self.actor.parameters(), lr=self.alpha)
@@ -43,6 +73,20 @@ class A2CAgent:
     # -- initialization -- #
 
     def act(self, state):
+        """Choose an action according to actor and evaluate the state according to critic.
+           Also stores the state value and the log probability of the action in the temporary buffer.
+
+        Parameters
+        ----------
+        state : torch.tensor
+            Tensor of size [num_agents * state_size]
+
+        Returns
+        -------
+            Numpy array of size [num_agents * action_size] whose values are in [-1, 1],
+            representing the action that is likely to maximize cumulative rewards.
+        """
+
         state = torch.FloatTensor(state).to(device)
 
         # evaluate the current state and choose
@@ -68,6 +112,22 @@ class A2CAgent:
         return np.clip(np.array(action), -1, 1)
 
     def store(self, s, a, r, ns, d):
+        """Add a new experience to the temporary buffer. Automatically calls learn() after n steps.
+
+        Parameters
+        ----------
+        s : torch.tensor
+            Initial state of the environment, per agent
+        a : numpy array
+            Action taken by each agent
+        r : numpy array
+            Reward obtained for taking that action, per agent
+        ns : torch.tensor
+            State of the environment after taking that action, per agent
+        d : bool
+            Whether or not the episode is over, per agent
+        """
+
         # ignore s and a because they're already handled in act(state)
         self.tmp_r.append(torch.FloatTensor(r).unsqueeze(1).to(device))
         self.tmp_ns = torch.FloatTensor(ns).to(device)
@@ -79,7 +139,10 @@ class A2CAgent:
         self.i = (self.i + 1) % self.n
 
     def learn(self):
-        # note that this is called automatically by the agent
+        """Retrieve information from the buffer, calculate discounted returns, estimate advantages
+        and take a gradient step to maximize the actor's log_prob * advantages.
+        Then improve the critic using gradient descent to minimize the mse between its output
+        and the returns. Finally delete the temporary buffer."""
 
         # create a single tensor for the values stored in act(), namely tmp_log_prob and tmp_critic_out
         log_prob = torch.cat(self.tmp_log_prob, dim=0)

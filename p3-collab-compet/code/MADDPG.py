@@ -35,8 +35,7 @@ class MADDPG:
             batch_size : int
                 Number of tuples to be sampled in a single learning step.
             alpha : float
-                Learning rate of the optimizer used for actor and critic. 
-                The value needs to be in [0, 1] (usually closer to 0).
+                Learning rate of the optimizer used for actor and critic.
             gamma : float
                 Weight of the estimation of TD target. The value needs to be in [0, 1]
                 (usually closer to 1) where 1 means that future rewards are as important as the immediate 
